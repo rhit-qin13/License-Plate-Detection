@@ -8,12 +8,12 @@ function readImages(dataStore)
 
     nImages = numel(dataStore.Files);
 
-    for i = 1:1
+    for i = 1:nImages
         [img, fileInfo] = readimage(dataStore, i);
         grayImg = rgb2gray(img);
         smoothImg= imgaussfilt(grayImg,3);
-        imtool(img);
-        imtool(smoothImg);
+        %imtool(img);
+        %imtool(smoothImg);
     end
 
 end
