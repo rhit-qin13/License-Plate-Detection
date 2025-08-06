@@ -222,3 +222,31 @@ end
 nTrain = numel(trainDS.Files);
 nTest = numel(testDS.Files);
 nValid = numel(validDS.Files);
+
+% test:
+detectionRate = detectionCount / testImages;
+avgDetectionsPerImage = totalDetections / testImages;
+fprintf('STATS\n');
+fprintf('Tested on %d images\n', testImages);
+fprintf('Images with detections: %d (%.1f%%)\n', detectionCount, detectionRate*100);
+fprintf('Total detections found: %d\n', totalDetections);
+fprintf('Average detections per image: %.2f\n', avgDetectionsPerImage);
+
+nTotal = nTrain + nTest + nValid;
+fprintf('\nDATASET STATS\n');
+fprintf('Training: %d images (%.1f%%)\n', nTrain, 100*nTrain/nTotal);
+fprintf('Testing: %d images (%.1f%%)\n', nTest, 100*nTest/nTotal);
+fprintf('Validation: %d images (%.1f%%)\n', nValid, 100*nValid/nTotal);
+fprintf('Total: %d images\n', nTotal);
+
+fprintf('PLATE EXTRACTION STATS\n');
+fprintf('Cropped plates saved: %d\n', plateCount);
+fprintf('Plates saved to: cropped_plates/ folder\n');
+
+plateFiles = dir('cropped_plates/*.jpg');
+fprintf('Files in cropped_plates folder: %d\n', length(plateFiles));
+
+fprintf('\nSUMMARY\n');
+fprintf('Detection success rate: %.1f%%\n', (detectionCount/testImages)*100);
+fprintf('Plates extracted and saved: %d\n', plateCount);
+fprintf('Preprocessing analysis completed on: %d sample plates\n', sampleCount);
