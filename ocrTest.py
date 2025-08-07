@@ -1,12 +1,20 @@
 from paddleocr import PaddleOCR
+import os
 
 
 
 ocr = PaddleOCR(use_angle_cls=True, lang='en') 
 
-imagePath = r"archive (1)\plate-license-5\test\0_3_hr_png_jpg.rf.c679897f52689da139e29adc623291fd.jpg"
+trainImages = r"archive (1)\plate-license-5\train"
+testImages = r"archive (1)\plate-license-5\test"
+validImages = r"archive (1)\plate-license-5\valid"
 
-results = ocr.predict(imagePath)
 
-for res in results:
-    print(res)
+def ocrImages(folderPath):
+    for fileName in os.listdir(folderPath):
+        results = ocr.predict(fileName)
+
+        for res in results:
+            print(res)
+
+#ocrImages(trainImages)
