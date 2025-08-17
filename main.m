@@ -17,9 +17,9 @@ clear;
 % Parameter Optimization Building on existing detectPlates function and batch test results
 
 
-trainDS = imageDatastore("archive (1)\plate-license-5\train\");
-testDS = imageDatastore("archive (1)\plate-license-5\test\");
-validDS = imageDatastore("archive (1)\plate-license-5\valid\");
+trainDS = imageDatastore("archive (1)\plate-license-5\train\", 'IncludeSubfolders', true);
+testDS = imageDatastore("archive (1)\plate-license-5\test\", 'IncludeSubfolders', true);
+validDS = imageDatastore("archive (1)\plate-license-5\valid\", 'IncludeSubfolders', true);
 
 function readImages(dataStore)
  nImages = numel(dataStore.Files);
