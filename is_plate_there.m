@@ -7,8 +7,11 @@ imdsTrain = imageDatastore(fullfile(mainDataFolder, 'train'), 'IncludeSubfolders
 imdsValidation = imageDatastore(fullfile(mainDataFolder, 'valid'), 'IncludeSubfolders', true, 'LabelSource', 'foldernames');
 imdsTest = imageDatastore(fullfile(mainDataFolder, 'test'), 'IncludeSubfolders', true, 'LabelSource', 'foldernames');
 
-inputSize = [227 227 3];
+imdsTrain.ReadFcn = @(filename) repmat(im2gray(imread(filename)), 1, 1, 3);
+imdsValidation.ReadFcn = @(filename) repmat(im2gray(imread(filename)), 1, 1, 3);
+imdsTest.ReadFcn = @(filename) repmat(im2gray(imread(filename)), 1, 1, 3);
 
+inputSize = [227 227 3];
 imageAugmenter = imageDataAugmenter( ...
     'RandRotation', [-10 10], ...
     'RandXTranslation', [-5 5], ...
@@ -24,7 +27,6 @@ augImdsTest = augmentedImageDatastore(inputSize, imdsTest);
 net = squeezenet;
 
 numClasses = numel(categories(imdsTrain.Labels));
-
 lgraph = layerGraph(net);
 
 layersToRemove = {
@@ -45,7 +47,6 @@ newLayers = [
     softmaxLayer('Name','softmax')
     classificationLayer('Name', 'new_classification_layer')
 ];
-
 lgraph = addLayers(lgraph, newLayers);
 lgraph = connectLayers(lgraph, 'fire9-concat', 'new_conv_for_plates');
 
@@ -58,7 +59,7 @@ options = trainingOptions('adam', ...
     'ValidationFrequency', 50, ...
     'Verbose', false, ...
     'Plots', 'training-progress', ...
-    'ExecutionEnvironment', 'gpu');  
+    'ExecutionEnvironment', 'gpu');
 
 trainedNet = trainNetwork(augImdsTrain, lgraph, options);
 
@@ -66,5 +67,3 @@ trainedNet = trainNetwork(augImdsTrain, lgraph, options);
 accuracyTest = mean(YPredTest == imdsTest.Labels);
 
 fprintf('Test Accuracy: %.2f%%\n', accuracyTest * 100);
-
-save('trainedNet.mat', 'trainedNet');
