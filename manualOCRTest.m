@@ -11,8 +11,8 @@ function manualOCRTest()
     fprintf('manual OCR test\n');
     
     % Setup paths
-    plateDataPath = 'C:\Users\sarmau\Image Recognition\License Plate Detection\archive (1)\plate-license-5\test\has_license_plate';
-    outputPath = 'C:\Users\sarmau\Image Recognition\License Plate Detection\cropped_plates';
+    plateDataPath = 'C:\Users\nagalab\Desktop\freeCodeCamp\License-Plate-Detection\archive (1)\plate-license-5\train\has_license_plate';
+    outputPath = 'C:\Users\nagalab\Desktop\freeCodeCamp\License-Plate-Detection\cropped_plates';
     
     % Check if input folder exists
     if ~exist(plateDataPath, 'dir')

@@ -1,0 +1,27 @@
+<annotation>
+	<folder></folder>
+	<filename>22bf70bdae805db8_jpg.rf.81cf4adb7d6487419fb45902f1192f5a.jpg</filename>
+	<path>22bf70bdae805db8_jpg.rf.81cf4adb7d6487419fb45902f1192f5a.jpg</path>
+	<source>
+		<database>roboflow.com</database>
+	</source>
+	<size>
+		<width>320</width>
+		<height>320</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>license</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<occluded>0</occluded>
+		<bndbox>
+			<xmin>49</xmin>
+			<xmax>277</xmax>
+			<ymin>67</ymin>
+			<ymax>243</ymax>
+		</bndbox>
+	</object>
+</annotation>
