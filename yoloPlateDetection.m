@@ -4,9 +4,9 @@ datasetFolder = 'License Plate Detection.v3i.voc';
 trainFolder = fullfile(datasetFolder, 'train');
 validateFolder = fullfile(datasetFolder, 'validate');
 testFolder = fullfile(datasetFolder, 'test');
-function [imagePaths, bboxLabels] = parseVOCAnnotations(imageFolder, annotationFolder)
+function [imagePaths,  boundingBoxLabels] = parseVOCAnnotations(imageFolder, annotationFolder)
     imagePaths = {};
-    bboxLabels = {};
+    boundingBoxLabels = {};
 
     xmlFiles = dir(fullfile(annotationFolder, '*.xml'));
     
@@ -44,7 +44,7 @@ function [imagePaths, bboxLabels] = parseVOCAnnotations(imageFolder, annotationF
 
         if ~isempty(boundingBoxes)
             imagePaths{end+1} = imagePath;
-            bboxLabels{end+1} = boundingBoxes;
+            boundingBoxLabels{end+1} = boundingBoxes;
         end
     end
 end
@@ -56,10 +56,10 @@ function datastore = createBoundingBoxDatastore(imageTable)
 
     imds = imageDatastore(imageFiles);
 
-    blds = boxLabelDatastore(boxTable);
+    boxLabels = boxLabelDatastore(boxTable);
 
 
-    datastore = combine(imds, blds);
+    datastore = combine(imds, boxLabels);
 end
 
 [trainImages, trainBboxes] = parseVOCAnnotations(trainFolder, trainFolder);
@@ -69,8 +69,8 @@ trainData = table(trainImages', trainBboxes', 'VariableNames', {'ImageFilename',
 
 
 I = imread(trainData.ImageFilename{1});
-bbox = trainData.BoundingBoxes{1};
-I = insertShape(I, 'Rectangle', bbox, 'LineWidth', 5);
+bBox = trainData.BoundingBoxes{1};
+I = insertShape(I, 'Rectangle', bBox, 'LineWidth', 5);
 imshow(I);
 title('First Image with Bounding Boxes');
 
@@ -79,7 +79,7 @@ trainDatastore = createBoundingBoxDatastore(trainData);
 
 anchorBoxes = estimateAnchorBoxes(trainDatastore, 9);
 
-lgraph = yolov2Layers([416 416 3], 1, anchorBoxes, 'resnet50');
+layerGraph = yolov2Layers([416 416 3], 1, anchorBoxes, 'resnet50');
 
 options = trainingOptions('sgdm', ...
     'MiniBatchSize', 16, ...
@@ -89,13 +89,13 @@ options = trainingOptions('sgdm', ...
     'VerboseFrequency', 10, ...
     'Plots', 'training-progress');
 
-detector = trainYOLOv2ObjectDetector(trainDatastore, lgraph, options);
+detector = trainYOLOv2ObjectDetector(trainDatastore, layerGraph, options);
 
 save('licensePlateDetector.mat', 'detector');
 
 testImage = imread('archive (1)\plate-license-5\test\has_license_plate\0_3_hr_png_jpg.rf.c679897f52689da139e29adc623291fd.jpg');
-[bboxes, scores, labels] = detect(detector, testImage);
+[boundingBoxes, scores, labels] = detect(detector, testImage);
 
-detectedImg = insertObjectAnnotation(testImage, 'rectangle', bboxes, scores);
+detectedImg = insertObjectAnnotation(testImage, 'rectangle', boundingBoxes, scores);
 imshow(detectedImg);
 title('Detected License Plates');
