@@ -16,108 +16,187 @@ clear;
 %% Mingjian Qin
 % Parameter Optimization Building on existing detectPlates function and batch test results
 
+clear; clc; close all;
 
-trainDS = imageDatastore("archive (1)\plate-license-5\train\", 'IncludeSubfolders', true);
-testDS = imageDatastore("archive (1)\plate-license-5\test\", 'IncludeSubfolders', true);
-validDS = imageDatastore("archive (1)\plate-license-5\valid\", 'IncludeSubfolders', true);
+datasetRoot = fullfile("archive (1)","plate-license-5");
+testDir     = fullfile(datasetRoot,"test");  
+outputDir   = "cropped_plates";
 
-function readImages(dataStore)
- nImages = numel(dataStore.Files);
-for i = 1:nImages
- [img, fileInfo] = readimage(dataStore, i);
- grayImg = rgb2gray(img);
- smoothImg= imgaussfilt(grayImg,3);
-%imtool(img);
-%imtool(smoothImg);
+if ~isfolder(testDir)
+    error('Test folder not found: %s', testDir);
 end
+if ~isfolder(outputDir)
+    mkdir(outputDir);
 end
 
-readImages(trainDS);
+testDS = imageDatastore(testDir, 'IncludeSubfolders', true);
 
+if ~isfile("trainedLicensePlateDetectionNet.mat")
+    error('trainedLicensePlateDetectionNet.mat not found in current folder.');
+end
+S = load("trainedLicensePlateDetectionNet.mat");  
+fn = fieldnames(S);
+trainedNet = S.(fn{1});  
 
-
-function readImages_Advanced(dataStore)
-    nImages = numel(dataStore.Files);
-    %for i = 1:nImages
-   for i = 1:1  
-        img = readimage(dataStore, i);
-        grayImg = rgb2gray(img);
-        smoothImg = imgaussfilt(grayImg, 3);
-        
-        edges = edge(smoothImg, 'Canny');
-        
-        se = strel('rectangle', [5, 15]);
-        closedEdges = imclose(edges, se);
-        
-        cc = bwconncomp(closedEdges);
-        stats = regionprops(cc, 'BoundingBox', 'Area', 'Perimeter', 'Eccentricity');
-        
-        plateCandidates = [];
-        
-        % shape properties
-        for k = 1:length(stats)
-            area = stats(k).Area;
-            perimeter = stats(k).Perimeter;
-            bbox = stats(k).BoundingBox;
-            eccentricity = stats(k).Eccentricity;
-            
-            circularity = 4 * pi * area / (perimeter^2);
-            aspectRatio = bbox(3) / bbox(4);  
-            
-            if area > 500 && ...             
-               circularity < 0.5 && ...       
-               eccentricity > 0.7 && ...      
-               aspectRatio > 2 && aspectRatio < 5   
-                
-                plateCandidates = [plateCandidates; bbox];
-            end
-        end
-        
-        % Show original image plus edges and stuff
-        figure; imshow(img);
-        title(['Detected License Plates in Image ', num2str(i)]);
-        hold on;
-        for j = 1:size(plateCandidates, 1)
-            rectangle('Position', plateCandidates(j, :), 'EdgeColor', 'r', 'LineWidth', 2);
-        end
-        hold off;
-        figure; imshow(closedEdges);
-        title(['Edges after Morphological Closing - Image ', num2str(i)]);
+inputSize = [];
+try
+    inputSize = trainedNet.Layers(1).InputSize(1:2);
+catch
+    
+    try
+        inputSize = trainedNet.InputSize(1:2);
+    catch
+        inputSize = [];
     end
 end
 
-readImages_Advanced(trainDS);
-
-
-function [plateCandidates, processedImages] = detectPlates(img)
-    grayImg = rgb2gray(img);
-    smoothImg = imgaussfilt(grayImg, 3);
-    edges = edge(smoothImg, 'Canny');
-    
-    se = strel('rectangle', [5, 15]);
-    closedEdges = imclose(edges, se);
-    
-    cc = bwconncomp(closedEdges);
-    stats = regionprops(cc, 'BoundingBox', 'Area', 'Perimeter', 'Eccentricity');
-    
-    plateCandidates = [];
-    for k = 1:length(stats)
-        area = stats(k).Area;
-        perimeter = stats(k).Perimeter;
-        bbox = stats(k).BoundingBox;
-        eccentricity = stats(k).Eccentricity;
-        
-        circularity = 4 * pi * area / (perimeter^2);
-        aspectRatio = bbox(3) / bbox(4);
-        
-        if area > 500 && circularity < 0.5 && eccentricity > 0.7 && aspectRatio > 2 && aspectRatio < 5
-            plateCandidates = [plateCandidates; bbox];
-        end
-    end
-    
-    processedImages.original = img;
-    processedImages.gray = grayImg;
-    processedImages.edges = edges;
-    processedImages.closedEdges = closedEdges;
+if isfile('optimized_params.mat')
+    load('optimized_params.mat', 'bestParams');
+    params = bestParams;
+    fprintf('Using optimized detection parameters.\n');
+else
+    params = struct();
+    params.minArea         = 600;
+    params.maxArea         = Inf;
+    params.maxCircularity  = 0.5;
+    params.minEccentricity = 0.7;
+    params.minAspectRatio  = 1.8;
+    params.maxAspectRatio  = 5.5;
+    fprintf('Using default detection parameters.\n');
 end
 
+whichDetect = which('detectPlates_Optimized.m');
+if isempty(whichDetect)
+    error('detectPlates_Optimized.m must be on the MATLAB path.');
+end
+if ~isfile('fixed_ocr.py')
+    error('fixed_ocr.py not found in current folder.');
+end
+
+N = numel(testDS.Files);
+fprintf('Found %d test images.\n', N);
+
+statsTotal.totalImages           = N;
+statsTotal.predictedHasPlate     = 0;
+statsTotal.totalCrops            = 0;
+statsTotal.ocrReadWithAnyText    = 0;
+
+for i = 1:N
+    imgPath = testDS.Files{i};
+    [img, ~] = readimage(testDS, i);
+
+    imgForNet = img;
+    if ~isempty(inputSize)
+        imgForNet = imresize(img, inputSize);
+    end
+    try
+        [label, scores] = classify(trainedNet, imgForNet);
+    catch ME
+        warning('Classification failed for %s: %s', imgPath, ME.message);
+        continue;
+    end
+
+    labelStr = string(label);
+    hasPlate = contains(lower(labelStr), "has");  
+
+    fprintf('\n[%d/%d] %s\n', i, N, imgPath);
+    fprintf('  Presence CNN -> %s  (max score = %.3f)\n', labelStr, max(scores));
+
+    if ~hasPlate
+        continue;
+    end
+    statsTotal.predictedHasPlate = statsTotal.predictedHasPlate + 1;
+
+    try
+        [plateCandidates, ~] = detectPlates_Optimized(img, params);
+    catch ME
+        warning('detectPlates_Optimized failed for %s: %s', imgPath, ME.message);
+        continue;
+    end
+
+    if isempty(plateCandidates)
+        fprintf('  No plate candidates found.\n');
+        continue;
+    end
+    fprintf('  Found %d candidate region(s).\n', size(plateCandidates,1));
+
+    [~, baseName, ~] = fileparts(imgPath);
+    anyTextThisImage = false;
+
+    for j = 1:size(plateCandidates, 1)
+        bbox = plateCandidates(j, :);
+        x = max(1, round(bbox(1)) - 5);
+        y = max(1, round(bbox(2)) - 5);
+        w = min(size(img,2) - x + 1, round(bbox(3)) + 10);
+        h = min(size(img,1) - y + 1, round(bbox(4)) + 10);
+
+        cropped = img(y:y+h-1, x:x+w-1, :);
+        cropName = sprintf('%s_crop_%02d.jpg', baseName, j);
+        cropPath = fullfile(outputDir, cropName);
+        imwrite(cropped, cropPath);
+        statsTotal.totalCrops = statsTotal.totalCrops + 1;
+
+        fprintf('    OCR on %s ... ', cropName);
+        ocrRes = runFixedPythonOCR(cropPath);
+        fprintf('text="%s"  conf=%.3f\n', ocrRes.text, ocrRes.confidence);
+
+        if ~isempty(strtrim(ocrRes.text))
+            anyTextThisImage = true;
+            statsTotal.ocrReadWithAnyText = statsTotal.ocrReadWithAnyText + 1;
+        end
+    end
+
+    if ~anyTextThisImage
+        fprintf('  (No readable text returned for this image.)\n');
+    end
+end
+
+fprintf('\n========== PIPELINE SUMMARY ==========\n');
+fprintf('Total images processed:       %d\n', statsTotal.totalImages);
+fprintf('Predicted has_plate:          %d\n', statsTotal.predictedHasPlate);
+fprintf('Total cropped candidates:     %d\n', statsTotal.totalCrops);
+fprintf('Crops with any OCR text:      %d\n', statsTotal.ocrReadWithAnyText);
+fprintf('Cropped images saved to:      %s\n', fullfile(pwd, outputDir));
+fprintf('======================================\n');
+
+
+
+
+
+function ocrResult = runFixedPythonOCR(imagePath)
+try
+    cmd = sprintf('python fixed_ocr.py "%s"', imagePath);
+    [status, cmdout] = system(cmd);
+    if status ~= 0
+        error('Python OCR failed: %s', cmdout);
+    end
+    ocrResult = parseFixedPythonOCROutput(cmdout);
+catch ME
+    ocrResult = struct();
+    ocrResult.text = '';
+    ocrResult.confidence = 0;
+    ocrResult.method = 'failed';
+    fprintf('OCR Error: %s\n', ME.message);
+end
+end
+
+function ocrResult = parseFixedPythonOCROutput(cmdout)
+ocrResult = struct();
+ocrResult.text = '';
+ocrResult.confidence = 0;
+ocrResult.method = 'PaddleOCR';
+
+lines = strsplit(cmdout, '\n');
+for i = 1:length(lines)
+    line = strtrim(lines{i});
+    if startsWith(line, 'TEXT:')
+        ocrResult.text = strtrim(line(6:end));
+    elseif startsWith(line, 'CONFIDENCE:')
+        try
+            ocrResult.confidence = str2double(line(12:end));
+        catch
+            ocrResult.confidence = 0;
+        end
+    end
+end
+end
