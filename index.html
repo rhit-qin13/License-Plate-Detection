@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Parking Lot Payment System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .camera-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            border: 2px dashed #dee2e6;
+        }
+
+        .camera-section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .camera-icon {
+            width: 30px;
+            height: 30px;
+            background: #3498db;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .upload-area {
+            border: 2px dashed #3498db;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            background: white;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            background: #f0f8ff;
+            border-color: #2980b9;
+        }
+
+        .upload-area.dragover {
+            background: #e3f2fd;
+            border-color: #1976d2;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 10px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .scan-btn {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .scan-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+        }
+
+        .scan-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .detection-results {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            border-left: 4px solid #3498db;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .result-value {
+            color: #27ae60;
+            font-family: 'Courier New', monospace;
+        }
+
+        .dashboard-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-card.revenue {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+        }
+
+        .stat-card.active {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .table-header {
+            background: #34495e;
+            color: white;
+            padding: 15px 20px;
+            font-weight: 600;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th, .table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-entry {
+            color: #27ae60;
+            font-weight: 600;
+        }
+
+        .status-exit {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+
+        .log-section {
+            grid-column: 1 / -1;
+            background: #2c3e50;
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .log-header {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #ecf0f1;
+        }
+
+        .log-entry {
+            padding: 5px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .log-entry.success {
+            color: #2ecc71;
+        }
+
+        .log-entry.error {
+            color: #e74c3c;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s ease;
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .receipt {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #27ae60;
+        }
+
+        .receipt-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .receipt-row:last-child {
+            border-bottom: none;
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #27ae60;
+        }
+
+        .close-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚗 Smart Parking System</h1>
+            <p>Parking lot License Plate Detection & Payment Processing</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Camera Section -->
+            <div class="camera-section">
+                <h2>
+                    <div class="camera-icon">📷</div>
+                    Security Camera Simulation
+                </h2>
+                
+                <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                    <div style="font-size: 3em; margin-bottom: 10px;">📸</div>
+                    <p><strong>Click to select vehicle image</strong></p>
+                    <p>or drag and drop an image here</p>
+                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                    <img id="imagePreview" class="image-preview" alt="Preview">
+                </div>
+
+                <button id="scanBtn" class="scan-btn" disabled>
+                    🔍 Scan Vehicle & Detect License Plate
+                </button>
+
+                <div id="detectionResults" class="detection-results" style="display: none;">
+                    <h3 style="margin-bottom: 15px; color: #2c3e50;">Detection Results</h3>
+                    <div class="result-item">
+                        <span class="result-label">License Plate:</span>
+                        <span id="plateNumber" class="result-value">---</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Confidence:</span>
+                        <span id="confidence" class="result-value">---</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Timestamp:</span>
+                        <span id="timestamp" class="result-value">---</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Action:</span>
+                        <span id="action" class="result-value">---</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Section -->
+            <div class="dashboard-section">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span id="totalVehicles" class="stat-number">0</span>
+                        <span class="stat-label">Total Processed</span>
+                    </div>
+                    <div class="stat-card active">
+                        <span id="activeVehicles" class="stat-number">0</span>
+                        <span class="stat-label">Currently Parked</span>
+                    </div>
+                    <div class="stat-card revenue">
+                        <span id="totalRevenue" class="stat-number">$0.00</span>
+                        <span class="stat-label">Total Revenue</span>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header">Currently Parked Vehicles</div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>License Plate</th>
+                                <th>Entry Time</th>
+                                <th>Duration</th>
+                                <th>Current Fee</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activeVehiclesTable">
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: #7f8c8d; padding: 30px;">
+                                    No vehicles currently parked
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header">Recent Transactions</div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>License Plate</th>
+                                <th>Entry</th>
+                                <th>Exit</th>
+                                <th>Duration</th>
+                                <th>Fee</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTable">
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: #7f8c8d; padding: 30px;">
+                                    No completed transactions yet
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- System Log -->
+            <div class="log-section">
+                <div class="log-header">📊 System Activity Log</div>
+                <div id="systemLog">
+                    <div class="log-entry">[12:00:00] System initialized and ready</div>
+                    <div class="log-entry">[12:00:01] Waiting for vehicle detection...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>💳 Payment Receipt</h2>
+                <p>Transaction completed successfully!</p>
+            </div>
+            <div id="receiptContent" class="receipt">
+                <!-- Receipt content will be populated by JavaScript -->
+            </div>
+            <button class="close-btn" onclick="closeModal()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // Application state
+        let activeParkings = new Map();
+        let completedParkings = [];
+        let selectedFile = null;
+        let totalProcessed = 0;
+
+        // Pricing configuration
+        const HOURLY_RATE = 5.0;
+        const MINIMUM_FEE = 2.0;
+        const MAXIMUM_DAILY_FEE = 50.0;
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEventListeners();
+            startUpdateTimer();
+            logMessage('System initialized and ready for vehicle detection');
+        });
+
+        function initializeEventListeners() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadArea = document.querySelector('.upload-area');
+            const scanBtn = document.getElementById('scanBtn');
+
+            fileInput.addEventListener('change', handleFileSelect);
+            scanBtn.addEventListener('click', processVehicle);
+
+            // Drag and drop functionality
+            uploadArea.addEventListener('dragover', handleDragOver);
+            uploadArea.addEventListener('dragleave', handleDragLeave);
+            uploadArea.addEventListener('drop', handleDrop);
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                selectedFile = file;
+                displayImagePreview(file);
+                document.getElementById('scanBtn').disabled = false;
+            }
+        }
+
+        function displayImagePreview(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('imagePreview');
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(event) {
+            event.currentTarget.classList.remove('dragover');
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0 && files[0].type.startsWith('image/')) {
+                selectedFile = files[0];
+                displayImagePreview(files[0]);
+                document.getElementById('scanBtn').disabled = false;
+                
+                // Update file input
+                const fileInput = document.getElementById('fileInput');
+                fileInput.files = files;
+            }
+        }
+
+        function processVehicle() {
+    if (!selectedFile) return;
+
+    const scanBtn = document.getElementById('scanBtn');
+    scanBtn.disabled = true;
+    scanBtn.textContent = '🔄 Processing with MATLAB...';
+
+    // Process with MATLAB
+    processWithMATLAB(selectedFile).then(result => {
+        const timestamp = new Date();
+        displayDetectionResults(result.plateNumber, result.confidence, timestamp, 'SUCCESS');
+
+        // Process entry or exit
+        if (activeParkings.has(result.plateNumber)) {
+            processExit(result.plateNumber, timestamp);
+        } else {
+            processEntry(result.plateNumber, timestamp);
+        }
+
+        updateDashboard();
+        
+        // Reset button
+        scanBtn.disabled = false;
+        scanBtn.textContent = '🔍 Scan Vehicle & Detect License Plate';
+        
+    }).catch(error => {
+        const timestamp = new Date();
+        
+        // Check if this is a "no license plate detected" error
+        if (error.status === 422) {
+            logMessage('❌ No license plate detected in image', 'error');
+            displayDetectionResults('NOT DETECTED', 0, timestamp, 'FAILED');
+            
+            // Show error message in results
+            document.getElementById('detectionResults').style.display = 'block';
+            document.getElementById('action').textContent = 'DETECTION FAILED';
+            document.getElementById('action').className = 'result-value status-exit';
+            
+        } else {
+            // Other processing errors
+            logMessage('❌ Error processing with MATLAB: ' + error.message, 'error');
+            displayDetectionResults('ERROR', 0, timestamp, 'ERROR');
+        }
+        
+        // Reset button
+        scanBtn.disabled = false;
+        scanBtn.textContent = '🔍 Scan Vehicle & Detect License Plate';
+    });
+}
+
+        async function processWithMATLAB(file) {
+    try {
+        // Create a unique filename
+        const timestamp = new Date().getTime();
+        const fileExtension = file.name.split('.').pop();
+        const imageFilename = `vehicle_${timestamp}.${fileExtension}`;
+        
+        logMessage('📤 Sending image to MATLAB for processing...');
+        
+        // Convert file to base64 for saving
+        const base64Data = await fileToBase64(file);
+        
+        // Send to local server
+        const response = await fetch('http://localhost:8080/process-image', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                filename: imageFilename,
+                imageData: base64Data,
+                originalName: file.name
+            })
+        });
+
+        if (response.status === 422) {
+            // No license plate detected
+            const errorData = await response.json();
+            logMessage(`❌ ${errorData.error}: ${errorData.message}`, 'error');
+            
+            const customError = new Error(errorData.message);
+            customError.status = 422;
+            customError.details = errorData.details;
+            throw customError;
+        }
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'MATLAB processing failed');
+        }
+
+        const result = await response.json();
+        
+        if (result.success && result.confidence > 0.3) {
+            logMessage(`✅ MATLAB detection completed: ${result.plateNumber} (${(result.confidence * 100).toFixed(1)}%)`, 'success');
+        } else {
+            logMessage(`⚠️ MATLAB detection completed with low confidence: ${result.plateNumber} (${(result.confidence * 100).toFixed(1)}%)`, 'error');
+        }
+        
+        return result;
+        
+    } catch (error) {
+        console.error('MATLAB processing error:', error);
+        throw error;
+    }
+}
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        function extractPlateFromFilename(filename) {
+            // Extract alphanumeric characters from filename
+            const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
+            let plate = nameWithoutExt.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+            
+            if (plate.length < 3) {
+                // Generate random plate for demo
+                plate = 'DEMO' + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+            }
+            
+            return plate.substring(0, 8); // Limit to 8 characters
+        }
+
+       function displayDetectionResults(plateNumber, confidence, timestamp, status = 'SUCCESS') {
+    document.getElementById('plateNumber').textContent = plateNumber;
+    document.getElementById('confidence').textContent = (confidence * 100).toFixed(1) + '%';
+    document.getElementById('timestamp').textContent = formatDateTime(timestamp);
+    
+    // Don't process entry/exit for failed detections
+    if (status === 'FAILED' || status === 'ERROR' || plateNumber === 'NOT DETECTED') {
+        document.getElementById('action').textContent = status;
+        document.getElementById('action').className = 'result-value status-exit';
+        document.getElementById('detectionResults').style.display = 'block';
+        return;
+    }
+    
+    const isExit = activeParkings.has(plateNumber);
+    document.getElementById('action').textContent = isExit ? 'EXIT' : 'ENTRY';
+    document.getElementById('action').className = isExit ? 'result-value status-exit' : 'result-value status-entry';
+    
+    document.getElementById('detectionResults').style.display = 'block';
+}
+
+        function processEntry(plateNumber, entryTime) {
+            activeParkings.set(plateNumber, {
+                plateNumber: plateNumber,
+                entryTime: entryTime
+            });
+
+            totalProcessed++;
+            logMessage(`ENTRY: Vehicle ${plateNumber} entered parking lot`, 'success');
+        }
+
+        function processExit(plateNumber, exitTime) {
+            const parkingRecord = activeParkings.get(plateNumber);
+            if (!parkingRecord) return;
+
+            const duration = exitTime - parkingRecord.entryTime;
+            const fee = calculateParkingFee(duration);
+
+            const completedParking = {
+                plateNumber: plateNumber,
+                entryTime: parkingRecord.entryTime,
+                exitTime: exitTime,
+                duration: duration,
+                fee: fee
+            };
+
+            completedParkings.push(completedParking);
+            activeParkings.delete(plateNumber);
+
+            logMessage(`EXIT: Vehicle ${plateNumber} exited - Fee: $${fee.toFixed(2)}`, 'success');
+            showPaymentModal(completedParking);
+        }
+
+        function calculateParkingFee(durationMs) {
+            const hours = durationMs / (1000 * 60 * 60);
+            let fee = hours * HOURLY_RATE;
+            
+            fee = Math.max(fee, MINIMUM_FEE);
+            fee = Math.min(fee, MAXIMUM_DAILY_FEE);
+            
+            return Math.round(fee * 100) / 100;
+        }
+
+        function updateDashboard() {
+            // Update statistics
+            document.getElementById('totalVehicles').textContent = totalProcessed;
+            document.getElementById('activeVehicles').textContent = activeParkings.size;
+            
+            const totalRevenue = completedParkings.reduce((sum, parking) => sum + parking.fee, 0);
+            document.getElementById('totalRevenue').textContent = '$' + totalRevenue.toFixed(2);
+
+            // Update active vehicles table
+            updateActiveVehiclesTable();
+            updateHistoryTable();
+        }
+
+        function updateActiveVehiclesTable() {
+            const tbody = document.getElementById('activeVehiclesTable');
+            
+            if (activeParkings.size === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: #7f8c8d; padding: 30px;">
+                            No vehicles currently parked
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            const now = new Date();
+
+            activeParkings.forEach((parking) => {
+                const duration = now - parking.entryTime;
+                const currentFee = calculateParkingFee(duration);
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${parking.plateNumber}</td>
+                    <td>${formatTime(parking.entryTime)}</td>
+                    <td>${formatDuration(duration)}</td>
+                    <td>$${currentFee.toFixed(2)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateHistoryTable() {
+            const tbody = document.getElementById('historyTable');
+            
+            if (completedParkings.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: #7f8c8d; padding: 30px;">
+                            No completed transactions yet
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            
+            // Show last 10 transactions
+            const recentTransactions = completedParkings.slice(-10).reverse();
+            
+            recentTransactions.forEach((parking) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${parking.plateNumber}</td>
+                    <td>${formatTime(parking.entryTime)}</td>
+                    <td>${formatTime(parking.exitTime)}</td>
+                    <td>${formatDuration(parking.duration)}</td>
+                    <td>$${parking.fee.toFixed(2)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function showPaymentModal(parking) {
+            const modal = document.getElementById('paymentModal');
+            const receiptContent = document.getElementById('receiptContent');
+            
+            receiptContent.innerHTML = `
+                <div class="receipt-row">
+                    <span>Vehicle:</span>
+                    <span>${parking.plateNumber}</span>
+                </div>
+                <div class="receipt-row">
+                    <span>Entry Time:</span>
+                    <span>${formatDateTime(parking.entryTime)}</span>
+                </div>
+                <div class="receipt-row">
+                    <span>Exit Time:</span>
+                    <span>${formatDateTime(parking.exitTime)}</span>
+                </div>
+                <div class="receipt-row">
+                    <span>Duration:</span>
+                    <span>${formatDuration(parking.duration)}</span>
+                </div>
+                <div class="receipt-row">
+                    <span>Parking Fee:</span>
+                    <span>$${parking.fee.toFixed(2)}</span>
+                </div>
+            `;
+            
+            modal.style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('paymentModal').style.display = 'none';
+        }
+
+        function startUpdateTimer() {
+            // Update current fees every 30 seconds
+            setInterval(() => {
+                if (activeParkings.size > 0) {
+                    updateActiveVehiclesTable();
+                }
+            }, 30000);
+        }
+
+        function logMessage(message, type = 'info') {
+            const logArea = document.getElementById('systemLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            
+            logArea.appendChild(logEntry);
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        function formatDateTime(date) {
+            return date.toLocaleString();
+        }
+
+        function formatTime(date) {
+            return date.toLocaleTimeString();
+        }
+
+        function formatDuration(durationMs) {
+            const totalMinutes = Math.floor(durationMs / (1000 * 60));
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            
+            if (hours > 0) {
+                return `${hours}h ${minutes}m`;
+            } else {
+                return `${minutes}m`;
+            }
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('paymentModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>
