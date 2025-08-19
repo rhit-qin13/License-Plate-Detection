@@ -1,66 +1,40 @@
-clear; clc;
+clear;
+clc;
 
-mainDataFolder = 'C:/Users/sarmau/Image Recognition/License Plate Detection/License Plate Detection.v3i.voc';
-trainDir = fullfile(mainDataFolder, 'train');
-valDir   = fullfile(mainDataFolder, 'valid');
-testDir  = fullfile(mainDataFolder, 'test');
+%% Load trained detector
+S = load('yolo_license_plate_v2.mat'); 
+detector = S.trainedDetector;  % <-- use the correct field name
+
+
+%% Define test folder and class
+testDir = 'C:/Users/sarmau/Image Recognition/License Plate Detection/License Plate Detection.v3i.voc/test';
 classNames = {'license'};
 
-trainTbl = parseVOCFolder(trainDir);
-valTbl   = parseVOCFolder(valDir);
-testTbl  = parseVOCFolder(testDir);
+%% Parse test VOC folder
+testTbl = parseVOCFolder(testDir);
+fprintf('Loaded %d test images\n', height(testTbl));
 
-fprintf('Loaded %d training, %d validation, %d test images\n', ...
-    height(trainTbl), height(valTbl), height(testTbl));
-
-imdsTrain = imageDatastore(trainTbl.imageFilename);
-bldsTrain = boxLabelDatastore(trainTbl(:, "license"));
-trainingData = combine(imdsTrain, bldsTrain);
-
-imdsVal = imageDatastore(valTbl.imageFilename);
-bldsVal = boxLabelDatastore(valTbl(:, "license"));
-validationData = combine(imdsVal, bldsVal);
-
+%% Create test datastores
 imdsTest = imageDatastore(testTbl.imageFilename);
 bldsTest = boxLabelDatastore(testTbl(:, "license"));
 testData = combine(imdsTest, bldsTest);
 
-inputSize = [416 416 3];
-numClasses = 1;
+%% Run detector on test set
+detectionResults = detect(detector, imdsTest, 'MiniBatchSize', 10);
 
-[anchorBoxes, meanIoU] = estimateAnchorBoxes(trainingData, 5);
-fprintf('Anchor boxes:\n'); disp(anchorBoxes);
-fprintf('Mean IoU: %.2f\n', meanIoU);
-
-detector = yolov2ObjectDetector('darknet19-coco', classNames, anchorBoxes);
-
-checkpointDir = 'C:/Users/sarmau/YOLOCheckpoints';
-if ~exist(checkpointDir,'dir'), mkdir(checkpointDir); end
-
-options = trainingOptions('adam', ...
-    'InitialLearnRate', 1e-4, ...
-    'MaxEpochs', 50, ...
-    'MiniBatchSize', 10, ...
-    'Shuffle', 'every-epoch', ...
-    'ValidationData', validationData, ...
-    'ValidationFrequency', 50, ...
-    'Verbose', false, ...
-    'Plots', 'training-progress', ...
-    'CheckpointPath', checkpointDir, ...
-    'ExecutionEnvironment', 'gpu');
-
-trainedDetector = trainYOLOv2ObjectDetector(trainingData, detector, options);
-
-save('yolo_license_plate_v2.mat','trainedDetector');
-
-detectionResults = detect(trainedDetector, imdsTest, 'MiniBatchSize', 10);
+%% Evaluate detection precision (using IoU threshold 0.5)
 [ap, recall, precision] = evaluateDetectionPrecision(detectionResults, bldsTest);
+
+%% Print results
 fprintf('Test Average Precision (AP) at IoU=0.5: %.2f%%\n', ap*100);
 
+%% ---------------------------
+%% Parser function for VOC folder
 function T = parseVOCFolder(folderPath)
     xmlFiles = dir(fullfile(folderPath, '*.xml'));
     imageFilename = strings(0,1);
     license = {};
+
     for i = 1:numel(xmlFiles)
         xmlPath = fullfile(folderPath, xmlFiles(i).name);
         try
@@ -68,6 +42,7 @@ function T = parseVOCFolder(folderPath)
         catch
             continue;
         end
+
         fnameNode = doc.getElementsByTagName('filename').item(0);
         if isempty(fnameNode), continue; end
         fname = char(fnameNode.getFirstChild.getData);
@@ -78,6 +53,7 @@ function T = parseVOCFolder(folderPath)
             if isempty(alt), continue; end
             imgPath = fullfile(folderPath, alt(1).name);
         end
+
         objects = doc.getElementsByTagName('object');
         boxes = [];
         for j = 0:objects.getLength-1
@@ -92,10 +68,12 @@ function T = parseVOCFolder(folderPath)
                 boxes = [boxes; xmin, ymin, xmax-xmin, ymax-ymin];
             end
         end
+
         if ~isempty(boxes)
             imageFilename(end+1,1) = string(imgPath);
             license{end+1,1} = boxes;
         end
     end
+
     T = table(imageFilename, license);
 end
